@@ -70,7 +70,7 @@ async def get_flight(flight_id: int):
 
         positions = await conn.fetch(
             """SELECT timestamp, latitude, longitude, altitude,
-                      groundspeed, heading
+                      groundspeed, heading, transponder
                FROM positions
                WHERE flight_id = $1
                ORDER BY timestamp""",

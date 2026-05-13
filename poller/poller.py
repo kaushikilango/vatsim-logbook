@@ -60,6 +60,7 @@ async def poll_once():
                     "altitude": me["altitude"],
                     "groundspeed": me["groundspeed"],
                     "heading": me["heading"],
+                    "transponder": me.get("transponder"),
                     "timestamp": ts,
                 })
         elif _active_flight_id is not None:
@@ -107,6 +108,29 @@ async def _ensure_flight(conn, pilot: dict) -> int:
         _active_flight_id = None
 
     fp = pilot.get("flight_plan") or {}
+
+    # Reconnect detection: if the same callsign closed within 30 min, reopen it.
+    # Departure/arrival are NOT required to match — VATSIM often returns an empty
+    # flight plan on reconnect, which would cause a false mismatch.
+    recent = await conn.fetchrow(
+        """SELECT id FROM flights
+           WHERE cid = $1 AND callsign = $2
+             AND logoff_time IS NOT NULL
+             AND logoff_time::timestamptz > NOW() - INTERVAL '30 minutes'
+           ORDER BY logoff_time DESC LIMIT 1""",
+        pilot["cid"], pilot["callsign"],
+    )
+    if recent:
+        fid = recent["id"]
+        # Reopen the flight; also clear arr_time so a mid-flight reconnect
+        # doesn't leave a premature arrival timestamp on the record.
+        await conn.execute(
+            "UPDATE flights SET logon_time = $1, logoff_time = NULL, arr_time = NULL WHERE id = $2",
+            logon, fid,
+        )
+        log.info(f"Reconnect detected — resumed flight id={fid} {pilot['callsign']}")
+        return fid
+
     row = await conn.fetchrow(
         """INSERT INTO flights
            (cid, callsign, server, pilot_rating, logon_time,

@@ -297,6 +297,9 @@ export default function FlightDetail() {
             {flight.planned_alt > 0 && <InfoRow label="Planned Alt" value={fmtAlt(flight.planned_alt)} />}
             {flight.cruise_tas  > 0 && <InfoRow label="Cruise TAS"  value={flight.cruise_tas + ' kt'} />}
             {flight.alternate        && <InfoRow label="Alternate"   value={flight.alternate} />}
+            {(livePos?.transponder || lastKnown?.transponder) && (
+              <InfoRow label="Squawk" value={livePos?.transponder ?? lastKnown.transponder} />
+            )}
             <InfoRow label="Track Points" value={positions.length.toLocaleString()} />
           </div>
 
@@ -338,6 +341,7 @@ export default function FlightDetail() {
               <InfoRow label="Altitude" value={fmtAlt(curPos.altitude)} accent="#58a6ff" />
               <InfoRow label="G/Speed"  value={curPos.groundspeed + ' kt'} />
               <InfoRow label="Heading"  value={curPos.heading + '°'} />
+              {curPos.transponder && <InfoRow label="Squawk" value={curPos.transponder} />}
               <InfoRow label="Progress" value={`${replayIdx + 1} / ${positions.length}`} />
             </div>
           )}
