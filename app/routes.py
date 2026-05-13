@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import json
 import logging
 import subprocess
 
@@ -282,7 +283,7 @@ async def webhook_deploy(request: Request):
     if payload == "ping":
         return {"status": "pong"}
 
-    data = await request.json() if not body else __import__("json").loads(body)
+    data = json.loads(body)
     if data.get("ref") != "refs/heads/master":
         return {"status": "ignored", "ref": data.get("ref")}
 
