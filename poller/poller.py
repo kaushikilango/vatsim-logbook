@@ -92,6 +92,30 @@ async def _close_flight(conn, flight_id: int):
     )
 
 
+async def _update_flight_plan(conn, flight_id: int, fp: dict):
+    """Update flight plan fields if the pilot has a non-empty plan."""
+    if not fp or not any(fp.get(k) for k in ("departure", "arrival", "aircraft", "route")):
+        return
+    await conn.execute(
+        """UPDATE flights SET
+               departure      = $1,
+               arrival        = $2,
+               alternate      = $3,
+               aircraft       = $4,
+               aircraft_short = $5,
+               flight_rules   = $6,
+               route          = $7,
+               planned_alt    = $8,
+               cruise_tas     = $9
+           WHERE id = $10""",
+        fp.get("departure"), fp.get("arrival"), fp.get("alternate"),
+        fp.get("aircraft"), fp.get("aircraft_short"),
+        fp.get("flight_rules"), fp.get("route"),
+        _safe_int(fp.get("altitude")), _safe_int(fp.get("cruise_tas")),
+        flight_id,
+    )
+
+
 async def _ensure_flight(conn, pilot: dict) -> int:
     global _active_flight_id
     logon = pilot["logon_time"]
@@ -102,6 +126,9 @@ async def _ensure_flight(conn, pilot: dict) -> int:
             _active_flight_id, logon,
         )
         if row:
+            # Update the flight plan in case it was filed (or amended) after connecting
+            fp = pilot.get("flight_plan") or {}
+            await _update_flight_plan(conn, _active_flight_id, fp)
             return _active_flight_id
         await _close_flight(conn, _active_flight_id)
         log.info(f"Auto-closed stale flight {_active_flight_id} (new logon detected)")
@@ -128,6 +155,8 @@ async def _ensure_flight(conn, pilot: dict) -> int:
             "UPDATE flights SET logon_time = $1, logoff_time = NULL, arr_time = NULL WHERE id = $2",
             logon, fid,
         )
+        # Also sync the flight plan in case it was filed since the last session
+        await _update_flight_plan(conn, fid, fp)
         log.info(f"Reconnect detected — resumed flight id={fid} {pilot['callsign']}")
         return fid
 
