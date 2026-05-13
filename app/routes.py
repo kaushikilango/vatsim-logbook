@@ -161,7 +161,7 @@ async def stats():
 async def stats_monthly():
     async with get_db() as conn:
         rows = await conn.fetch(
-            """SELECT TO_CHAR(logon_time, 'YYYY-MM') AS month,
+            """SELECT TO_CHAR(logon_time::timestamptz, 'YYYY-MM') AS month,
                       COUNT(*) AS flights,
                       ROUND(CAST(SUM(
                           CASE WHEN COALESCE(arr_time, logoff_time) IS NOT NULL

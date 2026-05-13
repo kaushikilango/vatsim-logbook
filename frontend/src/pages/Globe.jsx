@@ -25,7 +25,6 @@ const LEGEND = [
   { color: COLOR.narrowbody, label: 'Narrowbody' },
   { color: COLOR.other,      label: 'Other / unknown' },
   { color: COLOR.active,     label: 'Active flight' },
-  { color: COLOR.airport,    label: 'Airport' },
 ]
 
 function buildArcs(flights) {
@@ -113,19 +112,23 @@ export default function GlobePage() {
       .arcEndLng(d => d.endLng)
       .arcColor(d => arcColor(d))
       .arcAltitudeAutoScale(0.35)
-      .arcStroke(d => d.isActive ? 1.2 : 0.5)
+      .arcStroke(d => d.isActive ? 0.5 : 0.2)
       .arcDashLength(d => d.isActive ? 0.4 : 1)
       .arcDashGap(d => d.isActive ? 0.15 : 0)
       .arcDashAnimateTime(d => d.isActive ? 2000 : 0)
       .arcLabel(() => '')
       .onArcHover(arc => setHovered(arc ?? null))
       .onArcClick(arc => { arcClicked.current = true; setSelected(arc) })
-      // ── Airport dots ──────────────────────────────────────────────────────
-      .pointsData(pts)
-      .pointColor(() => COLOR.airport)
-      .pointAltitude(0.005)
-      .pointRadius(0.3)
-      .pointLabel(() => '')
+      // ── Airport ICAO labels ───────────────────────────────────────────────
+      .labelsData(pts)
+      .labelLat(d => d.lat)
+      .labelLng(d => d.lng)
+      .labelText(d => d.icao)
+      .labelSize(0.45)
+      .labelColor(() => 'rgba(255, 215, 0, 0.75)')
+      .labelDotRadius(0)
+      .labelAltitude(0.005)
+      .labelResolution(2)
 
     globeRef.current = g
 

@@ -4,6 +4,7 @@ import Logbook from './pages/Logbook'
 import Globe from './pages/Globe'
 import LiveTracker from './pages/LiveTracker'
 import FlightDetail from './pages/FlightDetail'
+import FlightDetail3D from './pages/FlightDetail3D'
 import Stats from './pages/Stats'
 
 export default function App() {
@@ -11,12 +12,13 @@ export default function App() {
     <BrowserRouter>
       <Navbar />
       <Routes>
-        <Route path="/"           element={<Logbook />} />
-        <Route path="/stats"      element={<Stats />} />
-        <Route path="/globe"      element={<Globe />} />
-        <Route path="/live"       element={<LiveTracker />} />
-        <Route path="/flight/:id" element={<FlightDetail />} />
-        <Route path="*"           element={<Navigate to="/" />} />
+        <Route path="/"              element={<Logbook />} />
+        <Route path="/stats"         element={<Stats />} />
+        <Route path="/globe"         element={<Globe />} />
+        <Route path="/live"          element={<LiveTracker />} />
+        <Route path="/flight/:id"    element={<FlightDetail />} />
+        <Route path="/flight/:id/3d" element={<FlightDetail3D />} />
+        <Route path="*"              element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
   )
