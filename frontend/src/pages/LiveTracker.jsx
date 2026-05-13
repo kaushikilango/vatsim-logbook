@@ -168,7 +168,7 @@ export default function LiveTracker() {
         {/* Departure airport */}
         {dep && (
           <CircleMarker center={[dep.latitude, dep.longitude]}
-            radius={7} color="#3fb950" fillColor="#3fb950" fillOpacity={0.9} weight={2}>
+            radius={2} color="#3fb950" fillColor="#3fb950" fillOpacity={0.5} weight={1}>
             <Popup>
               <strong>{dep.icao}</strong><br />{dep.name}
             </Popup>
@@ -178,7 +178,7 @@ export default function LiveTracker() {
         {/* Destination airport */}
         {arr && (
           <CircleMarker center={[arr.latitude, arr.longitude]}
-            radius={7} color="#f0883e" fillColor="#f0883e" fillOpacity={0.9} weight={2}>
+            radius={2} color="#f0883e" fillColor="#f0883e" fillOpacity={0.5} weight={1}>
             <Popup>
               <strong>{arr.icao}</strong><br />{arr.name}
             </Popup>
@@ -221,6 +221,7 @@ export default function LiveTracker() {
                 ['Altitude', fmtAlt(position.altitude)],
                 ['G/Speed',  `${position.groundspeed} kt`],
                 ['Heading',  `${position.heading}°`],
+                ['Squawk',   position.transponder ?? '—'],
                 ['Lat',      position.lat?.toFixed(4)],
                 ['Lng',      position.lng?.toFixed(4)],
               ].map(([k, v]) => (

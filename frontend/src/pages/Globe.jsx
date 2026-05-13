@@ -8,7 +8,7 @@ function aircraftFamily(ac) {
   if (!ac) return 'other'
   const c = ac.toUpperCase()
   if (/^(A3[3-9][0-9K]?|B74|B77|B78|B76|A38)/.test(c)) return 'widebody'
-  if (/^(A3[12][0-9N]?|B73|B38|E[12][7-9]|C[12-9][0-9]|CRJ)/.test(c)) return 'narrowbody'
+  if (/^(A3[12][0-9N]?|A19N|A20N|A21N|B73|B38|E[12][7-9]|C[12-9][0-9]|CRJ)/.test(c)) return 'narrowbody'
   return 'other'
 }
 

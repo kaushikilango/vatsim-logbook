@@ -234,7 +234,7 @@ export default function Logbook() {
                     <td style={td}><Link to={`/flight/${f.id}`} style={{ fontWeight: 600 }}>{f.callsign}</Link></td>
                     <td style={td}>{f.departure ?? '?'} → {f.arrival ?? '?'}</td>
                     <td style={td}>{f.aircraft_short ?? '—'}</td>
-                    <td style={td}>{f.flight_rules ?? '—'}</td>
+                    <td style={td}>{f.flight_rules === 'I' ? 'IFR' : f.flight_rules === 'V' ? 'VFR' : (f.flight_rules ?? '—')}</td>
                     <td style={td}>{fmt(f.logon_time)}</td>
                     <td style={td}>{duration(f)}</td>
                     <td style={td}>{f.max_altitude ? f.max_altitude.toLocaleString() + ' ft' : '—'}</td>
