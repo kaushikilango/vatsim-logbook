@@ -154,33 +154,57 @@ export default function FlightDetail() {
   const { flight, loading, error } = useFlight(id)
   const { position: livePos } = useLive()
 
-  const [replay,     setReplay]     = useState(false)
-  const [playing,    setPlaying]    = useState(false)
-  const [replayIdx,  setReplayIdx]  = useState(0)
-  const [speedIdx,   setSpeedIdx]   = useState(1)
-  const [arrAirport, setArrAirport] = useState(null)
+  const [replay,        setReplay]        = useState(false)
+  const [playing,       setPlaying]       = useState(false)
+  const [replayIdx,     setReplayIdx]     = useState(0)
+  const [speedIdx,      setSpeedIdx]      = useState(1)
+  const [arrAirport,    setArrAirport]    = useState(null)
+  const [livePositions, setLivePositions] = useState([])
   const intervalRef = useRef(null)
 
   const positions = flight?.positions ?? []
   const isLive    = !!flight && !flight.logoff_time
+
+  // Append each new WebSocket position to the trail so the path stays
+  // connected to the plane marker without waiting for a page reload.
+  useEffect(() => {
+    if (!livePos || !isLive) return
+    setLivePositions(prev => {
+      const lastTs = prev.length > 0 ? prev[prev.length - 1].timestamp
+        : positions.length > 0 ? positions[positions.length - 1].timestamp : null
+      if (lastTs && livePos.timestamp <= lastTs) return prev
+      return [...prev, {
+        timestamp:   livePos.timestamp,
+        latitude:    livePos.lat,
+        longitude:   livePos.lng,
+        altitude:    livePos.altitude,
+        groundspeed: livePos.groundspeed,
+        heading:     livePos.heading,
+        transponder: livePos.transponder,
+      }]
+    })
+  }, [livePos, isLive])
 
   useEffect(() => {
     if (!flight?.arrival || !isLive) return
     api.airport(flight.arrival).then(setArrAirport).catch(() => {})
   }, [flight?.arrival, isLive])
 
+  const allPositions = useMemo(() =>
+    [...positions, ...livePositions], [positions, livePositions])
+
   useEffect(() => {
     if (!replay || !playing) { clearInterval(intervalRef.current); return }
     intervalRef.current = setInterval(() => {
       setReplayIdx(i => {
-        if (i >= positions.length - 1) { setPlaying(false); return i }
+        if (i >= allPositions.length - 1) { setPlaying(false); return i }
         return i + 1
       })
     }, SPEEDS[speedIdx].ms)
     return () => clearInterval(intervalRef.current)
-  }, [replay, playing, speedIdx, positions.length])
+  }, [replay, playing, speedIdx, allPositions.length])
 
-  const smoothed = useMemo(() => smoothPath(positions), [positions])
+  const smoothed = useMemo(() => smoothPath(allPositions), [allPositions])
 
   const segments = useMemo(() => buildSegments(smoothed), [smoothed])
 
@@ -190,7 +214,7 @@ export default function FlightDetail() {
     [smoothed, replayIdx])
 
   const allLatLngs = useMemo(() =>
-    positions.map(p => [p.latitude, p.longitude]), [positions])
+    allPositions.map(p => [p.latitude, p.longitude]), [allPositions])
 
   // ── Early returns ─────────────────────────────────────────────────────────────
   if (loading) return (
@@ -201,8 +225,8 @@ export default function FlightDetail() {
   if (error)   return <p style={{ padding: 24, color: 'var(--red)' }}>Error: {error}</p>
   if (!flight) return <p style={{ padding: 24, color: 'var(--red)' }}>Flight not found.</p>
 
-  const curPos     = positions[replayIdx]
-  const lastKnown  = positions.length > 0 ? positions[positions.length - 1] : null
+  const curPos     = allPositions[replayIdx]
+  const lastKnown  = allPositions.length > 0 ? allPositions[allPositions.length - 1] : null
   const currentPos = livePos ?? (lastKnown ? {
     lat: lastKnown.latitude, lng: lastKnown.longitude,
     heading: lastKnown.heading, groundspeed: lastKnown.groundspeed,
@@ -213,8 +237,8 @@ export default function FlightDetail() {
               arrAirport.latitude, arrAirport.longitude)
     : null
 
-  const altData = positions.map((p, i) => ({ t: i, alt: p.altitude }))
-  const gsData  = positions.map((p, i) => ({ t: i, gs: p.groundspeed }))
+  const altData = allPositions.map((p, i) => ({ t: i, alt: p.altitude }))
+  const gsData  = allPositions.map((p, i) => ({ t: i, gs: p.groundspeed }))
 
   let plane2D = null
   if (replay && curPos)
@@ -258,7 +282,7 @@ export default function FlightDetail() {
             ● LIVE
           </span>
         )}
-        {positions.length > 0 && (
+        {allPositions.length > 0 && (
           <button
             onClick={toggleReplay}
             style={{
@@ -300,7 +324,7 @@ export default function FlightDetail() {
             {(livePos?.transponder || lastKnown?.transponder) && (
               <InfoRow label="Squawk" value={livePos?.transponder ?? lastKnown.transponder} />
             )}
-            <InfoRow label="Track Points" value={positions.length.toLocaleString()} />
+            <InfoRow label="Track Points" value={allPositions.length.toLocaleString()} />
           </div>
 
           {(flight.departure || flight.arrival) && (
@@ -342,7 +366,7 @@ export default function FlightDetail() {
               <InfoRow label="G/Speed"  value={curPos.groundspeed + ' kt'} />
               <InfoRow label="Heading"  value={curPos.heading + '°'} />
               {curPos.transponder && <InfoRow label="Squawk" value={curPos.transponder} />}
-              <InfoRow label="Progress" value={`${replayIdx + 1} / ${positions.length}`} />
+              <InfoRow label="Progress" value={`${replayIdx + 1} / ${allPositions.length}`} />
             </div>
           )}
 
@@ -391,7 +415,7 @@ export default function FlightDetail() {
         </div>
 
         {/* ── Map area ── */}
-        {positions.length > 0 ? (
+        {allPositions.length > 0 ? (
           <div style={{ flex: 1, position: 'relative', background: '#0a0e13' }}>
             <MapContainer
               center={[20, 0]}
@@ -455,7 +479,7 @@ export default function FlightDetail() {
                   {playing ? '⏸' : '▶'}
                 </button>
                 <input
-                  type="range" min={0} max={positions.length - 1} value={replayIdx}
+                  type="range" min={0} max={allPositions.length - 1} value={replayIdx}
                   onChange={e => { setPlaying(false); setReplayIdx(Number(e.target.value)) }}
                   style={{ flex: 1, accentColor: '#f0883e' }}
                 />
