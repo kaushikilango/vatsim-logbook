@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
 REPO=/home/kilango/Git/vatsim-logbook
 PYTHON=/home/kilango/Environments/current/bin/python
 LOG=/var/log/vatsim/deploy.log
