@@ -1,10 +1,13 @@
+import hashlib
+import hmac
 import logging
+import subprocess
 
 import httpx
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 
-from config import VATSIM_CID
+from config import VATSIM_CID, WEBHOOK_SECRET
 from db import get_db
 
 _AWC_BASE = "https://aviationweather.gov/api/data"
@@ -263,6 +266,33 @@ async def status():
         "flight_id": _active_flight_id,
         "last_poll": _last_timestamp,
     }
+
+
+@router.post("/webhook/deploy")
+async def webhook_deploy(request: Request):
+    body = await request.body()
+
+    if WEBHOOK_SECRET:
+        sig = request.headers.get("X-Hub-Signature-256", "")
+        expected = "sha256=" + hmac.new(WEBHOOK_SECRET.encode(), body, hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(expected, sig):
+            raise HTTPException(403, "Invalid signature")
+
+    payload = request.headers.get("X-GitHub-Event", "")
+    if payload == "ping":
+        return {"status": "pong"}
+
+    data = await request.json() if not body else __import__("json").loads(body)
+    if data.get("ref") != "refs/heads/master":
+        return {"status": "ignored", "ref": data.get("ref")}
+
+    # Detach from the current process group so the script survives the restart
+    subprocess.Popen(
+        ["/home/kilango/Git/vatsim-logbook/deploy/deploy.sh"],
+        start_new_session=True,
+    )
+    log.info("Deploy triggered via GitHub webhook")
+    return {"status": "deploying"}
 
 
 @router.get("/weather/metar/{icao}")
